@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
-import 'screens/home_screen.dart';
-import 'screens/add_record_screen.dart';
-import 'screens/stats_screen.dart';
-import 'screens/brands_screen.dart';
+import 'data/services/local_storage_service.dart';
+import 'presentation/screens/home_screen.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+
+  // Инициализация сервисов
+  await LocalStorageService().init();
+
   runApp(const MyApp());
 }
 
@@ -20,7 +23,6 @@ class MyApp extends StatelessWidget {
         visualDensity: VisualDensity.adaptivePlatformDensity,
       ),
       home: const HomeScreen(),
-      // Убираем routes, так как используем Navigator.push
     );
   }
 }
