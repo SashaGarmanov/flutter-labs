@@ -1,9 +1,11 @@
-name: autohelper_new
-description: "A Flutter application for car expense tracking"
+name: autohelper
+description: Приложение для учета автомобильных расходов с отслеживанием цен на топливо и погодой
+
+version: 1.0.0+1
+
 
 publish_to: 'none'
 
-version: 1.0.0+1
 
 environment:
   sdk: '>=3.0.0 <4.0.0'
@@ -16,6 +18,7 @@ dependencies:
   http: ^1.1.0
   sqflite: ^2.3.0
   path: ^1.8.3
+  flutter_launcher_icons: ^0.14.4
 
 dev_dependencies:
   flutter_test:
