@@ -2,9 +2,58 @@ import 'package:flutter/material.dart';
 import 'add_record_screen.dart';
 import 'stats_screen.dart';
 import 'brands_screen.dart';
+import '../models/operation.dart';
 
-class HomeScreen extends StatelessWidget {
+class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
+
+  @override
+  State<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends State<HomeScreen> {
+  int _currentIndex = 0;
+  final List<Operation> _operations = [
+    Operation(
+      id: '1',
+      type: 'Заправка',
+      amount: 3500,
+      comment: 'АИ-95, 40л',
+      date: DateTime(2023, 10, 25),
+      mileage: 150000,
+      liters: 40,
+    ),
+    Operation(
+      id: '2',
+      type: 'Сервис',
+      amount: 5000,
+      comment: 'Замена масла',
+      date: DateTime(2023, 10, 20),
+      mileage: 149800,
+    ),
+    Operation(
+      id: '3',
+      type: 'Запчасть',
+      amount: 2800,
+      comment: 'Тормозные колодки',
+      date: DateTime(2023, 10, 15),
+      mileage: 149500,
+    ),
+    Operation(
+      id: '4',
+      type: 'Мойка',
+      amount: 1150,
+      comment: 'Полная мойка',
+      date: DateTime(2023, 10, 10),
+      mileage: 149200,
+    ),
+  ];
+
+  void _addOperation(Operation operation) {
+    setState(() {
+      _operations.insert(0, operation);
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -14,32 +63,76 @@ class HomeScreen extends StatelessWidget {
         backgroundColor: Colors.blue,
         foregroundColor: Colors.white,
       ),
-      body: Column(
-        children: [
-          // Краткая сводка
-          _buildSummaryCard(),
-
-          // Список последних операций
-          _buildRecentOperations(),
-
-          // Кнопки навигации
-          _buildNavigationButtons(context),
-        ],
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          Navigator.push(
+      body: _buildCurrentScreen(),
+      floatingActionButton: _currentIndex == 0 ? FloatingActionButton(
+        onPressed: () async {
+          final result = await Navigator.push(
             context,
-            MaterialPageRoute(builder: (context) => const AddRecordScreen()),
+            MaterialPageRoute(
+              builder: (context) => AddRecordScreen(),
+            ),
           );
+          if (result != null) {
+            _addOperation(result);
+          }
         },
         backgroundColor: Colors.blue,
         child: const Icon(Icons.add, color: Colors.white),
+      ) : null,
+      bottomNavigationBar: BottomNavigationBar(
+        currentIndex: _currentIndex,
+        onTap: (index) {
+          setState(() {
+            _currentIndex = index;
+          });
+        },
+        items: const [
+          BottomNavigationBarItem(
+            icon: Icon(Icons.home),
+            label: 'Главная',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.show_chart),
+            label: 'Статистика',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.directions_car),
+            label: 'Бренды',
+          ),
+        ],
       ),
     );
   }
 
+  Widget _buildCurrentScreen() {
+    switch (_currentIndex) {
+      case 0:
+        return _buildHomeContent();
+      case 1:
+        return StatsScreen(operations: _operations);
+      case 2:
+        return const BrandsScreen();
+      default:
+        return _buildHomeContent();
+    }
+  }
+
+  Widget _buildHomeContent() {
+    return Column(
+      children: [
+        _buildSummaryCard(),
+        _buildRecentOperations(),
+      ],
+    );
+  }
+
+  int _calculateTotal() {
+    return _operations.fold(0, (sum, operation) => sum + operation.amount);
+  }
+
   Widget _buildSummaryCard() {
+    final total = _calculateTotal();
+
     return Card(
       margin: const EdgeInsets.all(16),
       elevation: 4,
@@ -48,7 +141,7 @@ class HomeScreen extends StatelessWidget {
         child: Column(
           children: [
             const Text(
-              'Затраты за октябрь',
+              'Общие затраты',
               style: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
@@ -56,7 +149,7 @@ class HomeScreen extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             Text(
-              '12 450 ₽',
+              '$total ₽',
               style: TextStyle(
                 fontSize: 24,
                 fontWeight: FontWeight.bold,
@@ -65,7 +158,7 @@ class HomeScreen extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             Text(
-              'Средний расход: 8.2 л/100км',
+              'Операций: ${_operations.length}',
               style: TextStyle(
                 fontSize: 14,
                 color: Colors.grey[600],
@@ -93,33 +186,17 @@ class HomeScreen extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             Expanded(
-              child: ListView(
-                children: const [
-                  _OperationItem(
-                    date: '25.10.2025',
-                    type: 'Заправка',
-                    amount: '3 500 ₽',
-                    comment: 'АИ-95, 40л',
-                  ),
-                  _OperationItem(
-                    date: '20.10.2025',
-                    type: 'Сервис',
-                    amount: '5 000 ₽',
-                    comment: 'Замена масла',
-                  ),
-                  _OperationItem(
-                    date: '15.10.2025',
-                    type: 'Запчасть',
-                    amount: '2 800 ₽',
-                    comment: 'Тормозные колодки',
-                  ),
-                  _OperationItem(
-                    date: '10.10.2025',
-                    type: 'Мойка',
-                    amount: '1 150 ₽',
-                    comment: 'Полная мойка',
-                  ),
-                ],
+              child: ListView.builder(
+                itemCount: _operations.length,
+                itemBuilder: (context, index) {
+                  final operation = _operations[index];
+                  return _OperationItem(
+                    date: '${operation.date.day}.${operation.date.month}.${operation.date.year}',
+                    type: operation.type,
+                    amount: '${operation.amount} ₽',
+                    comment: operation.comment,
+                  );
+                },
               ),
             ),
           ],
@@ -127,48 +204,8 @@ class HomeScreen extends StatelessWidget {
       ),
     );
   }
-
-  Widget _buildNavigationButtons(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.all(16),
-      child: Row(
-        children: [
-          Expanded(
-            child: ElevatedButton.icon(
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => const StatsScreen()),
-                );
-              },
-              icon: const Icon(Icons.show_chart),
-              label: const Text('Статистика'),
-              style: ElevatedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(vertical: 12),
-              ),
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: ElevatedButton.icon(
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => const BrandsScreen()),
-                );
-              },
-              icon: const Icon(Icons.directions_car),
-              label: const Text('Бренды авто'),
-              style: ElevatedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(vertical: 12),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
 }
+
 
 class _OperationItem extends StatelessWidget {
   final String date;

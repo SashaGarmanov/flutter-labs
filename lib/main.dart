@@ -5,11 +5,11 @@ import 'screens/stats_screen.dart';
 import 'screens/brands_screen.dart';
 
 void main() {
-  runApp(const MainApp());
+  runApp(const MyApp());
 }
 
-class MainApp extends StatelessWidget {
-  const MainApp({super.key});
+class MyApp extends StatelessWidget {
+  const MyApp({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -19,7 +19,8 @@ class MainApp extends StatelessWidget {
         primarySwatch: Colors.blue,
         visualDensity: VisualDensity.adaptivePlatformDensity,
       ),
-      home: const HomeScreen(), // Главный экран как точка входа
+      home: const HomeScreen(),
+      // Убираем routes, так как используем Navigator.push
     );
   }
 }

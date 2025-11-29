@@ -52,22 +52,14 @@ class _BrandsScreenState extends State<BrandsScreen> {
 
   String _getFlagEmoji(String country) {
     switch (country) {
-      case 'Germany':
-        return '🇩🇪';
-      case 'Japan':
-        return '🇯🇵';
-      case 'USA':
-        return '🇺🇸';
-      case 'South Korea':
-        return '🇰🇷';
-      case 'Russia':
-        return '🇷🇺';
-      case 'France':
-        return '🇫🇷';
-      case 'Italy':
-        return '🇮🇹';
-      default:
-        return '🏳️';
+      case 'Germany': return '🇩🇪';
+      case 'Japan': return '🇯🇵';
+      case 'USA': return '🇺🇸';
+      case 'South Korea': return '🇰🇷';
+      case 'Russia': return '🇷🇺';
+      case 'France': return '🇫🇷';
+      case 'Italy': return '🇮🇹';
+      default: return '🏳️';
     }
   }
 
@@ -78,12 +70,6 @@ class _BrandsScreenState extends State<BrandsScreen> {
         title: const Text('Бренды авто'),
         backgroundColor: Colors.blue,
         foregroundColor: Colors.white,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () {
-            Navigator.pop(context);
-          },
-        ),
       ),
       body: Column(
         children: [
@@ -184,7 +170,6 @@ class _BrandsScreenState extends State<BrandsScreen> {
                             style: const TextStyle(fontSize: 20),
                           ),
                           onTap: () {
-                            // Действие при выборе бренда
                             ScaffoldMessenger.of(context).showSnackBar(
                               SnackBar(
                                 content: Text('Выбрана марка: ${brand['name']}'),

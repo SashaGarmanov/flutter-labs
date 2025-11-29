@@ -1,48 +1,90 @@
 import 'package:flutter/material.dart';
+import '../models/operation.dart';
 
-class StatsScreen extends StatelessWidget {
-  const StatsScreen({super.key});
+class StatsScreen extends StatefulWidget {
+  final List<Operation> operations;
+
+  const StatsScreen({super.key, required this.operations});
+
+  @override
+  State<StatsScreen> createState() => _StatsScreenState();
+}
+
+class _StatsScreenState extends State<StatsScreen> {
+  int _calculateTotal() {
+    return widget.operations.fold(0, (sum, operation) => sum + operation.amount);
+  }
+
+  double _calculateFuelConsumption() {
+    final fuelOperations = widget.operations
+        .where((op) => op.type == 'Заправка' && op.liters != null && op.mileage != null)
+        .toList()
+      ..sort((a, b) => a.date.compareTo(b.date));
+
+    if (fuelOperations.length < 2) return 0.0;
+
+    double totalConsumption = 0;
+    int calculations = 0;
+
+    for (int i = 1; i < fuelOperations.length; i++) {
+      final current = fuelOperations[i];
+      final previous = fuelOperations[i - 1];
+
+      final distance = current.mileage! - previous.mileage!;
+      final fuel = current.liters!;
+
+      if (distance > 0 && fuel > 0) {
+        final consumption = (fuel / distance) * 100;
+        totalConsumption += consumption;
+        calculations++;
+      }
+    }
+
+    return calculations > 0 ? totalConsumption / calculations : 0.0;
+  }
+
+  Map<String, int> _calculateCategoryTotals() {
+    final Map<String, int> totals = {};
+    for (var operation in widget.operations) {
+      totals[operation.type] = (totals[operation.type] ?? 0) + operation.amount;
+    }
+    return totals;
+  }
 
   @override
   Widget build(BuildContext context) {
+    final total = _calculateTotal();
+    final categoryTotals = _calculateCategoryTotals();
+    final fuelConsumption = _calculateFuelConsumption();
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Статистика'),
         backgroundColor: Colors.blue,
         foregroundColor: Colors.white,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () {
-            Navigator.pop(context);
-          },
-        ),
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Общая статистика
-            _buildTotalStats(),
+            _buildTotalStats(total),
             const SizedBox(height: 24),
-
-            // Средний расход топлива
-            _buildFuelConsumption(),
+            _buildFuelConsumption(fuelConsumption),
             const SizedBox(height: 24),
-
-            // Расходы по месяцам
-            _buildMonthlyExpenses(),
-            const SizedBox(height: 24),
-
-            // Расходы по категориям
-            _buildCategoryExpenses(),
+            _buildCategoryExpenses(categoryTotals, total),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildTotalStats() {
+  Widget _buildTotalStats(int total) {
+    final currentMonth = DateTime.now().month;
+    final monthlyTotal = widget.operations
+        .where((op) => op.date.month == currentMonth)
+        .fold(0, (sum, op) => sum + op.amount);
+
     return Card(
       elevation: 4,
       child: Padding(
@@ -58,7 +100,7 @@ class StatsScreen extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             Text(
-              '45 820 ₽',
+              '$total ₽',
               style: TextStyle(
                 fontSize: 32,
                 fontWeight: FontWeight.bold,
@@ -69,8 +111,8 @@ class StatsScreen extends StatelessWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
-                _buildStatItem('За месяц', '12 450 ₽'),
-                _buildStatItem('За год', '45 820 ₽'),
+                _buildStatItem('За месяц', '$monthlyTotal ₽'),
+                _buildStatItem('Всего операций', '${widget.operations.length}'),
               ],
             ),
           ],
@@ -101,7 +143,9 @@ class StatsScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildFuelConsumption() {
+  Widget _buildFuelConsumption(double consumption) {
+    final fuelOperations = widget.operations.where((op) => op.type == 'Заправка').length;
+
     return Card(
       elevation: 4,
       child: Padding(
@@ -123,7 +167,7 @@ class StatsScreen extends StatelessWidget {
                   child: Column(
                     children: [
                       Text(
-                        '8.2',
+                        consumption > 0 ? consumption.toStringAsFixed(1) : '--',
                         style: TextStyle(
                           fontSize: 28,
                           fontWeight: FontWeight.bold,
@@ -144,7 +188,7 @@ class StatsScreen extends StatelessWidget {
                   child: Column(
                     children: [
                       Text(
-                        '12.2',
+                        '$fuelOperations',
                         style: TextStyle(
                           fontSize: 28,
                           fontWeight: FontWeight.bold,
@@ -152,7 +196,7 @@ class StatsScreen extends StatelessWidget {
                         ),
                       ),
                       Text(
-                        'км/л',
+                        'заправок',
                         style: TextStyle(
                           fontSize: 14,
                           color: Colors.grey[600],
@@ -164,100 +208,42 @@ class StatsScreen extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 8),
-            LinearProgressIndicator(
-              value: 0.65,
-              backgroundColor: Colors.grey[300],
-              valueColor: AlwaysStoppedAnimation<Color>(Colors.green[700]!),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'На 35% экономичнее среднего по классу',
-              style: TextStyle(
-                fontSize: 12,
-                color: Colors.grey[600],
+            if (consumption > 0) ...[
+              LinearProgressIndicator(
+                value: consumption / 15,
+                backgroundColor: Colors.grey[300],
+                valueColor: AlwaysStoppedAnimation<Color>(Colors.green[700]!),
               ),
-            ),
+              const SizedBox(height: 8),
+              Text(
+                'На ${((15 - consumption) / 15 * 100).toStringAsFixed(0)}% экономичнее максимума',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Colors.grey[600],
+                ),
+              ),
+            ] else if (fuelOperations < 2) ...[
+              Text(
+                'Нужно больше данных для расчета',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Colors.grey[600],
+                ),
+              ),
+            ],
           ],
         ),
       ),
     );
   }
 
-  Widget _buildMonthlyExpenses() {
-    final months = ['Янв', 'Фев', 'Мар', 'Апр', 'Май', 'Июн', 'Июл', 'Авг', 'Сен', 'Окт'];
-    final expenses = [3200, 2800, 4100, 3500, 4800, 5200, 4500, 3900, 4200, 12450];
-
-    final maxExpense = expenses.reduce((a, b) => a > b ? a : b);
-
-    return Card(
-      elevation: 4,
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Расходы по месяцам',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: 16),
-            SizedBox(
-              height: 200,
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: List.generate(months.length, (index) {
-                  final height = (expenses[index] / maxExpense) * 150;
-                  return Expanded(
-                    child: Column(
-                      children: [
-                        Container(
-                          width: 20,
-                          height: height,
-                          margin: const EdgeInsets.symmetric(horizontal: 4),
-                          decoration: BoxDecoration(
-                            color: Colors.blue[400],
-                            borderRadius: BorderRadius.circular(4),
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          months[index],
-                          style: TextStyle(
-                            fontSize: 10,
-                            color: Colors.grey[600],
-                          ),
-                        ),
-                        Text(
-                          '${expenses[index]}₽',
-                          style: const TextStyle(
-                            fontSize: 9,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ],
-                    ),
-                  );
-                }),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildCategoryExpenses() {
+  Widget _buildCategoryExpenses(Map<String, int> categoryTotals, int total) {
     final categories = [
-      {'name': 'Заправка', 'amount': 25600, 'color': Colors.green},
-      {'name': 'Сервис', 'amount': 12500, 'color': Colors.orange},
-      {'name': 'Запчасти', 'amount': 6200, 'color': Colors.red},
-      {'name': 'Мойка', 'amount': 1520, 'color': Colors.blue},
+      {'name': 'Заправка', 'color': Colors.green},
+      {'name': 'Сервис', 'color': Colors.orange},
+      {'name': 'Запчасти', 'color': Colors.red},
+      {'name': 'Мойка', 'color': Colors.blue},
     ];
-
-    final total = categories.fold(0, (sum, category) => sum + (category['amount'] as int));
 
     return Card(
       elevation: 4,
@@ -276,7 +262,8 @@ class StatsScreen extends StatelessWidget {
             const SizedBox(height: 16),
             Column(
               children: categories.map((category) {
-                final percentage = (category['amount'] as int) / total * 100;
+                final amount = categoryTotals[category['name']] ?? 0;
+                final percentage = total > 0 ? (amount / total * 100) : 0;
                 return Padding(
                   padding: const EdgeInsets.only(bottom: 12),
                   child: Row(
@@ -293,7 +280,7 @@ class StatsScreen extends StatelessWidget {
                       Expanded(
                         child: Text(category['name'] as String),
                       ),
-                      Text('${category['amount']} ₽'),
+                      Text('$amount ₽'),
                       const SizedBox(width: 8),
                       Text(
                         '${percentage.toStringAsFixed(1)}%',
